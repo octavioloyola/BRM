@@ -80,36 +80,36 @@ class Model:
 
         for i in range(0, self.ClassifierCount):
             # compare
-            d = np.amin(np.sqrt(np.sum(np.power(self._centers[i] - instance, 2), axis=1)))
+            d = np.amin(np.sqrt(np.sum(np.power(self._centers[i] - instance, 2), axis=1))/self._maxDissimilarity)
             
             if d > 0:
                 current_similarity += math.exp(-(d * d )/(2*self._sd[i]*self._sd[i]))
             else:
                 current_similarity += 1
 
-            current_similarity /= self.ClassifierCount
-            
-            if (current_similarity < 0):
-                current_similarity = 0
+        current_similarity /= self.ClassifierCount
+        
+        if (current_similarity < 0):
+            current_similarity = 0
 
-            if (self.UsePastEvenQueue == False):
-                return 1-current_similarity
+        if (self.UsePastEvenQueue == False):
+            return 1-current_similarity
 
-            result_similarity = (self._alpha * self._similaritySum / self._maxEventCount + (1 - self._alpha) * current_similarity);
-            if (result_similarity < 0):
-                result_similarity = 0
+        result_similarity = (self._alpha * self._similaritySum / self._maxEventCount + (1 - self._alpha) * current_similarity);
+        if (result_similarity < 0):
+            result_similarity = 0
 
-            self._similaritySum += current_similarity;
+        self._similaritySum += current_similarity;
 
-            if (len(self._pastEvents) == self._maxEventCount):
-                self._similaritySum -= self._pastEvents.pop(0)
+        if (len(self._pastEvents) == self._maxEventCount):
+            self._similaritySum -= self._pastEvents.pop(0)
 
-            self._pastEvents.append(current_similarity)
+        self._pastEvents.append(current_similarity)
 
-            if (self._similaritySum < 0):
-                self._similaritySum = 0
+        if (self._similaritySum < 0):
+            self._similaritySum = 0
 
-            return 1 - result_similarity
+        return 1 - result_similarity
 
 
     def score_samples(self, X_test):
@@ -165,11 +165,11 @@ class Model:
 
 
 
-    # this compare method was generated based in the implemnetation of c# but with some assumptions
-    def comparev2(self,centers, x, y):
-        componentDiff = (abs( np.subtract(centers[x], centers[y]) ) / self._maxLessMin)
+    # this compare method was generated based in the implemnetation of c# but with some assumptions, USING THIS ONE
+    def comparev2(self,source, compareTo):
+        componentDiff = (abs( np.subtract(source, compareTo) ) / self._maxLessMin)
         num = sum((element > 1)and 1 or math.pow(element, 2) for element in componentDiff)
-        sumCat = np.count_nonzero(centers[x] == centers[y])
+        sumCat = np.count_nonzero(source == compareTo)
         return math.sqrt(sumCat+num)/ self._maxDissimilarity
 
 
@@ -181,7 +181,7 @@ class Model:
 
         for i in range(0, len(centers)-1):
             for j in range(i+1, len(centers)):
-                suma += self.comparev2(centers, i, j)
+                suma += self.comparev2(centers[i], centers[j])
                 #suma += self.compare(centers[i], centers[j])
                 count += 1
 
@@ -199,7 +199,7 @@ class Model:
         list_instances = instances.values.tolist()
         #list_instances = instances.to_numpy()
         for i in range(0, self.ClassifierCount):
-            centers = random.sample(list_instances, self.sampleSize)
+            centers = random.choices(list_instances, k=self.sampleSize)
             #centers = list_instances[np.random.randint(list_instances.shape[0], size=self.sampleSize), :]
             self._centers = np.insert(self._centers, i, centers, axis=0)
             self._sd = np.insert(self._sd, i, self.compute_beta(self._centers[i]))
@@ -264,19 +264,17 @@ X_train, X_test, y_train, y_test, X_train_minmax, X_test_minmax, X_train_std, X_
 # Here i will initializate the Class of BRM, and send its parans and stuff of the intreface of sklearn
 classifier = Model() 
 
-# classify
+# train
 start = time.time()
 classifier.fit(X_train, y_train)
 end = time.time()
-
 elapsed = int(round((end - start)*1000))
 print("Time consummed for training: ", elapsed ,"ms")
 
+#classify
 start = time.time()
 y_pred_classif = classifier.score_samples(X_test)
 end = time.time()
-
 elapsed = int(round((end - start)*1000))
 print("Time consummed for classifying: ", elapsed ,"ms")
-
 print(y_pred_classif)
