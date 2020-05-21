@@ -19,7 +19,7 @@ class Model:
         self.BootstrapSamplePercent = 1
         self.UseBootstrapSampleCount = False
         self.BootstrapSampleCount = 0
-        self.UsePastEvenQueue = True
+        self.UsePastEvenQueue = False
         self._sd = []
         self._centers = []
         self._pastEvents = []
@@ -88,6 +88,7 @@ class Model:
                 current_similarity += 1
 
         current_similarity /= self.ClassifierCount
+    
         
         if (current_similarity < 0):
             current_similarity = 0
@@ -95,7 +96,7 @@ class Model:
         if (self.UsePastEvenQueue == False):
             return 1-current_similarity
 
-        result_similarity = (self._alpha * self._similaritySum / self._maxEventCount + (1 - self._alpha) * current_similarity);
+        result_similarity = (self._alpha * self._similaritySum / self._maxEventCount + (1 - self._alpha) * current_similarity)
         if (result_similarity < 0):
             result_similarity = 0
 
@@ -199,7 +200,7 @@ class Model:
         list_instances = instances.values.tolist()
         #list_instances = instances.to_numpy()
         for i in range(0, self.ClassifierCount):
-            centers = random.choices(list_instances, k=self.sampleSize)
+            centers = np.sort(random.choices(list_instances, k=self.sampleSize))
             #centers = list_instances[np.random.randint(list_instances.shape[0], size=self.sampleSize), :]
             self._centers = np.insert(self._centers, i, centers, axis=0)
             self._sd = np.insert(self._sd, i, self.compute_beta(self._centers[i]))
