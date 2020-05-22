@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import euclidean_distances
 import time
 import itertools
-from multiprocessing import Pool
+from multiprocessing import Pool, Semaphore, cpu_count
 
 class BRM:
     def __init__(self):
@@ -91,8 +91,8 @@ class BRM:
 
         #min_d = np.amin(np.sqrt(np.sum(np.power(rest, 2), axis=1)))/self._maxDissimilarity
         #current_similarity = sum( np.exp(np.divide( (-(min_d * min_d)), (np.multiply(self._sd, 2)))) )
-
-        with Pool(6) as p:
+        pool = cpu_count() - 1
+        with Pool(pool) as p:
             y_labels = p.map(self.classify, array_instances)
 
         return y_labels
