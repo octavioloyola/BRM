@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import euclidean_distances
 import time
 import itertools
+from multiprocessing import Pool
 
 class BRM:
     def __init__(self):
@@ -31,11 +32,50 @@ class BRM:
         self._numberOfFeatures = 0
         self._maxDissimilarity = 0
         self.sampleSize = 0
+    
+
+    def classify(self, instance):
+        current_similarity = 0.0
+        result_similarity = 0.0
+
+        for i in range(0, self.ClassifierCount):
+
+            min_d = np.amin(np.sqrt(np.sum(np.power(self._centers[i] - instance, 2), axis=1)))/self._maxDissimilarity
+
+            if min_d > 0:
+                current_similarity += math.exp(-(min_d * min_d )/(2*self._sd[i]))
+            else:
+                current_similarity += 1
+        
+
+        current_similarity /= self.ClassifierCount
+
+        if (current_similarity < 0):
+            current_similarity = 0
+
+        if (self.UsePastEvenQueue == False):
+            return 1 - current_similarity
+            
+        result_similarity = (self._alpha * self._similaritySum / self._maxEventCount + (1 - self._alpha) * current_similarity)
+        if (result_similarity < 0):
+            result_similarity = 0
+
+        self._similaritySum += current_similarity
+
+        if (len(self._pastEvents) == self._maxEventCount):
+            self._similaritySum -= self._pastEvents.pop(0)
+
+        self._pastEvents.append(current_similarity)
+
+        if (self._similaritySum < 0):
+            self._similaritySum = 0
+
+        return 1 - result_similarity
 
 
     def score_samples(self, X_test):        
         X_test[X_test.columns] = self._scaler.transform(X_test[X_test.columns])
-
+        array_instances =  np.array(X_test)
         list_instances = X_test.values.tolist()
         num_test_samples = X_test.shape[0]
         test_numberOfFeatures = X_test.shape[1]
@@ -48,46 +88,12 @@ class BRM:
 
         y_labels = []
 
-        for instance in list_instances:
 
-            current_similarity = 0.0
-            result_similarity = 0.0
-            result_per_instance = 0.0
+        #min_d = np.amin(np.sqrt(np.sum(np.power(rest, 2), axis=1)))/self._maxDissimilarity
+        #current_similarity = sum( np.exp(np.divide( (-(min_d * min_d)), (np.multiply(self._sd, 2)))) )
 
-            for i in range(0, self.ClassifierCount):
-                # compare
-                min_d = np.amin(np.sqrt(np.sum(np.power(self._centers[i] - instance, 2), axis=1)))/self._maxDissimilarity
-
-                if min_d > 0:
-                    current_similarity += math.exp(-(min_d * min_d )/(2*self._sd[i]))
-                else:
-                    current_similarity += 1
-
-            current_similarity /= self.ClassifierCount
-
-            if (current_similarity < 0):
-                current_similarity = 0
-
-            if (self.UsePastEvenQueue == False):
-                result_per_instance = 1 - current_similarity
-            else:
-                result_similarity = (self._alpha * self._similaritySum / self._maxEventCount + (1 - self._alpha) * current_similarity)
-                if (result_similarity < 0):
-                    result_similarity = 0
-
-                self._similaritySum += current_similarity
-
-                if (len(self._pastEvents) == self._maxEventCount):
-                    self._similaritySum -= self._pastEvents.pop(0)
-
-                self._pastEvents.append(current_similarity)
-
-                if (self._similaritySum < 0):
-                    self._similaritySum = 0
-
-                result_per_instance = 1 - result_similarity
-            
-            y_labels.append(result_per_instance)
+        with Pool(6) as p:
+            y_labels = p.map(self.classify, array_instances)
 
         return y_labels
 
@@ -162,32 +168,33 @@ def splitdataset(train, test):
     
     return X_train, X_test, y_train, y_test, X_train_minmax, X_test_minmax, X_train_std, X_test_std, X_train_minmax_std, X_test_minmax_std
 
-        
+
+def main():
+    trainFile = 'D:/Jc/Documents/Universidad/8vo/ExtraOct/BRM/data/abalone-tra_num.csv'
+    testFile = 'D:/Jc/Documents/Universidad/8vo/ExtraOct/BRM/data/abalone-tst_num.csv'
+
+    # Loading data 
+    train, test = importdata(trainFile, testFile)
+
+    X_train, X_test, y_train, y_test, X_train_minmax, X_test_minmax, X_train_std, X_test_std, X_train_minmax_std, X_test_minmax_std = splitdataset(train, test) 
+
+    # Here i will initializate the Class of BRM, and send its parans and stuff of the intreface of sklearn
+    classifier = BRM() 
+
+    # train
+    start = time.time()
+    classifier.fit(X_train, y_train)
+    end = time.time()
+    elapsed = int(round((end - start)*1000))
+    print("Time consummed for training: ", elapsed ,"ms")
+
+    #classify
+    start = time.time()
+    y_pred_classif = classifier.score_samples(X_test)
+    end = time.time()
+    elapsed = int(round((end - start)*1000))
+    print("Time consummed for classifying: ", elapsed ,"ms")
 
 
-trainFile = 'D:/Jc/Documents/Universidad/8vo/ExtraOct/BRM/data/abalone-tra_num.csv'
-testFile = 'D:/Jc/Documents/Universidad/8vo/ExtraOct/BRM/data/abalone-tst_num.csv'
-
-
-# Loading data 
-train, test = importdata(trainFile, testFile)
-
-X_train, X_test, y_train, y_test, X_train_minmax, X_test_minmax, X_train_std, X_test_std, X_train_minmax_std, X_test_minmax_std = splitdataset(train, test) 
-
-# Here i will initializate the Class of BRM, and send its parans and stuff of the intreface of sklearn
-classifier = BRM() 
-
-# train
-start = time.time()
-classifier.fit(X_train, y_train)
-end = time.time()
-elapsed = int(round((end - start)*1000))
-print("Time consummed for training: ", elapsed ,"ms")
-
-#classify
-start = time.time()
-y_pred_classif = classifier.score_samples(X_test)
-end = time.time()
-elapsed = int(round((end - start)*1000))
-print("Time consummed for classifying: ", elapsed ,"ms")
-print(len(y_pred_classif))
+if __name__ == '__main__':
+    main()
