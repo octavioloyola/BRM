@@ -13,7 +13,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import euclidean_distances
 import time
 import itertools
-from multiprocessing import Pool, Semaphore, cpu_count
+from multiprocessing import Pool, Semaphore, cpu_count, Process
+import matplotlib.pyplot as plt
 
 class BRM:
     def __init__(self):
@@ -34,22 +35,7 @@ class BRM:
         self.sampleSize = 0
     
 
-    def classify(self, instance):
-        current_similarity = 0.0
-        result_similarity = 0.0
-
-        for i in range(0, self.ClassifierCount):
-
-            min_d = np.amin(np.sqrt(np.sum(np.power(self._centers[i] - instance, 2), axis=1)))/self._maxDissimilarity
-
-            if min_d > 0:
-                current_similarity += math.exp(-(min_d * min_d )/(2*self._sd[i]))
-            else:
-                current_similarity += 1
-        
-
-        current_similarity /= self.ClassifierCount
-
+    def evaluate(self, current_similarity):
         if (current_similarity < 0):
             current_similarity = 0
 
@@ -72,56 +58,35 @@ class BRM:
 
         return 1 - result_similarity
 
+    def score_samples(self, X_test):
+        X_test = pd.DataFrame(self._scaler.transform(X_test[X_test.columns]), index=X_test.index, columns=X_test.columns)  
 
-    def score_samples(self, X_test):        
-        X_test[X_test.columns] = self._scaler.transform(X_test[X_test.columns])
-        array_instances =  np.array(X_test)
-        list_instances = X_test.values.tolist()
-        num_test_samples = X_test.shape[0]
-        test_numberOfFeatures = X_test.shape[1]
-
-        if X_test.ndim > 1:
-            test_numberOfFeatures = X_test.shape[1]
-
-        if (test_numberOfFeatures != self._numberOfFeatures):
+        if (X_test.shape[1] != self._numberOfFeatures):
             raise Exception('Unable to compare objects: Invalid instance model')
 
-        y_labels = []
-
-
-        #min_d = np.amin(np.sqrt(np.sum(np.power(rest, 2), axis=1)))/self._maxDissimilarity
-        #current_similarity = sum( np.exp(np.divide( (-(min_d * min_d)), (np.multiply(self._sd, 2)))) )
-        pool = cpu_count() - 1
-        with Pool(pool) as p:
-            y_labels = p.map(self.classify, array_instances)
-
-        return y_labels
-
+        current_similarity = np.sum(np.reshape(np.array([np.exp(-np.power(np.amin(euclidean_distances(X_test, self._centers[i]), axis=1)/self._maxDissimilarity, 2)/(self._sd[i])) for i in range(len(self._centers))]), (len(X_test),-1)), axis=1)/self.ClassifierCount
+        return list(map(self.evaluate, current_similarity))
+        
 
     def fit(self, X_train, y_train):
         self._numberOfFeatures = X_train.shape[1]
-
         if self._numberOfFeatures < 1:
-            raise Exception('Unable to instantiate the train dataset - Empty vector')
+            raise Exception('Unable to instantiate the train dataset - Empty vector')        
         
         self._scaler = MinMaxScaler()
-        X_train[X_train.columns] = self._scaler.fit_transform(X_train[X_train.columns])
+        X_train =  pd.DataFrame(self._scaler.fit_transform(X_train[X_train.columns]), index=X_train.index, columns=X_train.columns)
+
 
         self._maxDissimilarity = math.sqrt(self._numberOfFeatures)
-        self.sampleSize = int(self.BootstrapSampleCount) if (self.UseBootstrapSampleCount) else int(0.01 * self.BootstrapSamplePercent * len(X_train))
-        
-        if self.sampleSize < 1:
-            raise Exception('Unable to train with a sampleSize of 0')
-        
         self._sd = np.empty(0)
+        self.sampleSize = int(self.BootstrapSampleCount) if (self.UseBootstrapSampleCount) else int(0.01 * self.BootstrapSamplePercent * len(X_train));
         self._centers = np.empty((0, self.sampleSize, self._numberOfFeatures))
 
-
-        list_instances = X_train.values.tolist()    
-        for i in range(0, self.ClassifierCount):
+        list_instances = X_train.values.tolist()
+        for i in range(0, self.ClassifierCount):            
             centers = random.choices(list_instances, k=self.sampleSize)
             self._centers = np.insert(self._centers, i, centers, axis=0)
-            self._sd = np.insert(self._sd, i, (np.mean(euclidean_distances(centers, centers))/self._maxDissimilarity)**2)
+            self._sd = np.insert(self._sd, i, 2*(np.mean(euclidean_distances(centers, centers))/self._maxDissimilarity)**2)
 
 
 # Function importing Dataset 
@@ -183,18 +148,21 @@ def main():
 
     # train
     start = time.time()
+
     classifier.fit(X_train, y_train)
+
     end = time.time()
     elapsed = int(round((end - start)*1000))
     print("Time consummed for training: ", elapsed ,"ms")
 
     #classify
     start = time.time()
+
     y_pred_classif = classifier.score_samples(X_test)
+
     end = time.time()
     elapsed = int(round((end - start)*1000))
     print("Time consummed for classifying: ", elapsed ,"ms")
-
 
 if __name__ == '__main__':
     main()
