@@ -1,20 +1,13 @@
-import pickle
 import math
 import numpy as np   # We recommend to use numpy arrays
-from os.path import isfile
 import os
-import sys
 import random
-from sklearn.ensemble import GradientBoostingClassifier
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import euclidean_distances
 import time
-import itertools
-from multiprocessing import Pool, Semaphore, cpu_count, Process
-import matplotlib.pyplot as plt
 
 class BRM:
     def __init__(self):
@@ -22,7 +15,7 @@ class BRM:
         self.BootstrapSamplePercent = 100
         self.UseBootstrapSampleCount = False
         self.BootstrapSampleCount = 0
-        self.UsePastEvenQueue = True
+        self.UsePastEvenQueue = False
         self._sd = []
         self._centers = []
         self._pastEvents = []
@@ -35,13 +28,13 @@ class BRM:
         self.sampleSize = 0
     
 
-    def evaluate(self, current_similarity):
+    def _evaluate(self, current_similarity):
         if (current_similarity < 0):
             current_similarity = 0
 
         if (self.UsePastEvenQueue == False):
-            return 1 - current_similarity
-            
+            return -1+2*current_similarity
+        
         result_similarity = (self._alpha * self._similaritySum / self._maxEventCount + (1 - self._alpha) * current_similarity)
         if (result_similarity < 0):
             result_similarity = 0
@@ -56,16 +49,20 @@ class BRM:
         if (self._similaritySum < 0):
             self._similaritySum = 0
 
-        return 1 - result_similarity
+        return -1+2*result_similarity
 
     def score_samples(self, X_test):
-        X_test = pd.DataFrame(self._scaler.transform(X_test[X_test.columns]), index=X_test.index, columns=X_test.columns)  
-
         if (X_test.shape[1] != self._numberOfFeatures):
             raise Exception('Unable to compare objects: Invalid instance model')
+        
+        X_test = pd.DataFrame(self._scaler.transform(X_test[X_test.columns]), index=X_test.index, columns=X_test.columns)  
 
-        current_similarity = np.sum(np.reshape(np.array([np.exp(-np.power(np.amin(euclidean_distances(X_test, self._centers[i]), axis=1)/self._maxDissimilarity, 2)/(self._sd[i])) for i in range(len(self._centers))]), (len(X_test),-1)), axis=1)/self.ClassifierCount
-        return list(map(self.evaluate, current_similarity))
+        current_similarity = np.average([np.exp(-np.power(np.amin(euclidean_distances(X_test, clf_classif._centers[i]), axis=1)/clf_classif._maxDissimilarity, 2)/(clf_classif._sd[i])) for i in range(len(clf_classif._centers))], axis=0)
+        return list(map(self._evaluate, current_similarity))
+
+
+    def predict(self, X):
+        return [1 if i >= 0 else -1 for i in score_samples(X)]
         
 
     def fit(self, X_train, y_train):
@@ -134,7 +131,7 @@ def splitdataset(train, test):
     return X_train, X_test, y_train, y_test, X_train_minmax, X_test_minmax, X_train_std, X_test_std, X_train_minmax_std, X_test_minmax_std
 
 
-def main():
+def start():
     trainFile = 'D:/Jc/Documents/Universidad/8vo/ExtraOct/BRM/data/abalone-tra_num.csv'
     testFile = 'D:/Jc/Documents/Universidad/8vo/ExtraOct/BRM/data/abalone-tst_num.csv'
 
@@ -165,4 +162,4 @@ def main():
     print("Time consummed for classifying: ", elapsed ,"ms")
 
 if __name__ == '__main__':
-    main()
+    start()
