@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 class BRM(BaseEstimator):
-    def __init__(self, classifier_count=100, bootstrap_sample_percent=100, use_bootstrap_sample_count=False, bootstrap_sample_count=0, use_past_even_queue=False, max_event_count=3, alpha=0.5, UserThreshold=95):
+    def __init__(self, classifier_count=100, bootstrap_sample_percent=100, use_bootstrap_sample_count=False, bootstrap_sample_count=0, use_past_even_queue=False, max_event_count=3, alpha=0.5, user_threshold=95):
         self.classifier_count = classifier_count
         self.bootstrap_sample_percent = bootstrap_sample_percent
         self.use_bootstrap_sample_count = use_bootstrap_sample_count
@@ -17,7 +17,7 @@ class BRM(BaseEstimator):
         self.use_past_even_queue = use_past_even_queue
         self.max_event_count = max_event_count
         self.alpha = alpha
-        self.UserThreshold = UserThreshold
+        self.user_threshold = user_threshold
         
     def _evaluate(self, current_similarity):
         if (current_similarity < 0):
@@ -48,6 +48,7 @@ class BRM(BaseEstimator):
 
         current_similarity = np.average([np.exp(-np.power(np.amin(euclidean_distances(X_test, self._centers[i]), axis=1)/self._max_dissimilarity, 2)/(self._sd[i])) for i in range(len(self._centers))], axis=0)
         return list(map(self._evaluate, current_similarity))
+        
 
     def predict(self, X):
         if (len(X.shape) < 2):
@@ -57,22 +58,13 @@ class BRM(BaseEstimator):
             raise ValueError('Reshape your data')
 
         if not self._is_threshold_Computed:            
-            x_pred_classif = clf_classif.score_samples(self._X_train)            
+            x_pred_classif = self.score_samples(self._X_train)            
             x_pred_classif.sort()
-            self._inner_threshold = x_pred_classif[(100-self.UserThreshold)*len(x_pred_classif)//100]
+            self._inner_threshold = x_pred_classif[(100-self.user_threshold)*len(x_pred_classif)//100]
             self._is_threshold_Computed = True
 
-        y_pred_classif = clf_classif.score_samples(X)
+        y_pred_classif = self.score_samples(X)
         return [-1 if s <= self._inner_threshold else 1 for s in y_pred_classif]
-
-    def predict(self, X):
-        if (len(X.shape) < 2):
-            raise ValueError('Reshape your data')
-
-        if (X.shape[1] != self.n_features_in_):
-            raise ValueError('Reshape your data')
-
-        return np.array([1 if i >= 0 else -1 for i in self.score_samples(X)])
         
 
     def fit(self, X, y):

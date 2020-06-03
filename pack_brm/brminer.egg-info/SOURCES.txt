@@ -1,0 +1,8 @@
+README.md
+setup.py
+brminer/__init__.py
+brminer.egg-info/PKG-INFO
+brminer.egg-info/SOURCES.txt
+brminer.egg-info/dependency_links.txt
+brminer.egg-info/requires.txt
+brminer.egg-info/top_level.txt
