@@ -1,6 +1,8 @@
 # Example Created by Octavio Loyola-González and Miguel Angel Medina-Pérez
 
 import pandas as pd
+import brminer
+from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
@@ -55,9 +57,6 @@ def prediction(X_test, clf_object):
 
 def result_of_Class(y_test, y_pred, saveFile):       
     np.savetxt(saveFile, y_pred, fmt='%.4f')
-
-import brminer
-from sklearn.metrics import roc_auc_score
 
 trainFile = 'abalone-17_vs_7-8-9-10-5-2tra.dat.csv'
 testFile = 'abalone-17_vs_7-8-9-10-5-2tst.dat.csv'
