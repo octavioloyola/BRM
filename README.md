@@ -2,7 +2,7 @@
 
 * BaggingRandomMiner is an ensemble of weak one-class classifiers based on dissimilarities:
   * BRM can work with numerical and nominal features.
-  * You can intall BRM as a python package by using [pip install brminer](https://pypi.org/project/brminer/).
+  * You can intall BRM as a python package by using [pip install brminer](https://pypi.org/project/brminer/){:target="_blank"}.
   * An practical example about how to use BRM can be seen in [BRM/tree/master/Example](https://github.com/octavioloyola/BRM/tree/master/Example).
   * BRM has been used in several papers, such as:
     * [A one-class classification approach for bot detection on Twitter](https://doi.org/10.1016/j.cose.2020.101715)
