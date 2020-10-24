@@ -67,9 +67,13 @@ class BRM(BaseEstimator):
         return [-1 if s <= self._inner_threshold else 1 for s in y_pred_classif]
         
 
-    def fit(self, X, y):
+    def fit(self, X, y = None):
         # Check that X and y have correct shape
-        X_train, y_train = check_X_y(X, y)
+        if y:
+            X_train, y_train = check_X_y(X, y)
+        else:
+             X_train = check_array(X)
+             
         self._similarity_sum = 0
         self._is_threshold_Computed = False
 
