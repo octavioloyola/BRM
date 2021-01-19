@@ -43,11 +43,19 @@ class BRM(BaseEstimator):
         return -1+2*result_similarity
 
     def score_samples(self, X):
-        X_test = pd.DataFrame(X)
-        X_test = pd.DataFrame(self._scaler.transform(X_test[X_test.columns]), index=X_test.index, columns=X_test.columns)  
+        X = np.array(X)
+        X_test = self._scaler.transform(X)
 
-        current_similarity = np.average([np.exp(-np.power(np.amin(euclidean_distances(X_test, self._centers[i]), axis=1)/self._max_dissimilarity, 2)/(self._sd[i])) for i in range(len(self._centers))], axis=0)
-        return list(map(self._evaluate, current_similarity))
+        result = []
+        batch_size = 100
+        for i in range(min(len(X_test), batch_size), len(X_test) + batch_size, batch_size):
+            current_X_test = X_test[[j for j in range(max(0, i-batch_size), min(i, len(X_test)))]]
+
+            current_similarity = np.average([np.exp(-np.power(np.amin(euclidean_distances(current_X_test, self._centers[i]), axis=1)/self._max_dissimilarity, 2)/(self._sd[i])) for i in range(len(self._centers))], axis=0)
+        
+            result = result + [j for j in list(map(self._evaluate, current_similarity))]
+
+        return result
         
 
     def predict(self, X):
