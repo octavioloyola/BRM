@@ -69,7 +69,7 @@ class BRM(BaseEstimator):
 
     def fit(self, X, y = None):
         # Check that X and y have correct shape
-        if y:
+        if y is not None:
             X_train, y_train = check_X_y(X, y)
         else:
              X_train = check_array(X)
