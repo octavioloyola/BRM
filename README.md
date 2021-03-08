@@ -2,6 +2,7 @@
 
 * BaggingRandomMiner is an ensemble of weak one-class classifiers based on dissimilarities:
   * BRM can work with only numerical features. If you have nominal features, a solution is to use OneHotEncoder. An example of using BRM with nominal features can be found [HERE](https://github.com/octavioloyola/BRM/tree/master/Example).
+  * The following link includes a working example in Google Colab: https://colab.research.google.com/drive/1Qsi1UdUKBpBdL3bJqiaoXMgjYzhBJdVl?usp=sharing
   * You can install BRM as a python package by using [pip install brminer](https://pypi.org/project/brminer/).
   * More information about training and classification stages can be seen [HERE](https://github.com/octavioloyola/BRM/tree/master/pack_brm)
   * A practical example about how to use BRM can be seen in [BRM/tree/master/Example](https://github.com/octavioloyola/BRM/tree/master/Example).
